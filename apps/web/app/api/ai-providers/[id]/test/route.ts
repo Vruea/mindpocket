@@ -34,7 +34,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     return Response.json({ ok: true })
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Unknown error"
+    const raw = e instanceof Error ? e.message : String(e)
+    const message = raw.replace(/[^\x20-\x7E\xA0-\xFF]/g, '?')
     return Response.json({ error: message }, { status: 400 })
   }
 }
