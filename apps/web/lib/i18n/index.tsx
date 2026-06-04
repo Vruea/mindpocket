@@ -12,7 +12,7 @@ interface LocaleContextValue {
 }
 
 const STORAGE_KEY = "mindpocket-locale"
-const DEFAULT_LOCALE: Locale = "zh"
+const DEFAULT_LOCALE: Locale = "en"
 
 const LocaleContext = createContext<LocaleContextValue | null>(null)
 
