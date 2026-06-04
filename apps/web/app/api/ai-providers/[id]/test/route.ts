@@ -34,14 +34,17 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     return Response.json({ ok: true })
   } catch (e) {
-    let raw: string
-    try {
-      raw = e instanceof Error ? e.message : JSON.stringify(e)
-    } catch {
-      raw = String(e)
+    let message = "Unknown error"
+    if (e instanceof Error) {
+      message = e.message
+    } else if (e !== null && typeof e === "object") {
+      const err = e as Record<string, unknown>
+      message = (err.message as string) || (err.error as string) || message
+    } else if (typeof e === "string") {
+      message = e
     }
-    // Strip any non-ASCII characters that cause ByteString encoding errors
-    const message = raw.replace(/[^\x20-\x7E]/g, "?")
-    return Response.json({ error: message }, { status: 400 })
+    // Remove any character outside printable ASCII range
+    const sanitized = message.replace(/[^\x00-\x7F]/g, "?").trim()
+    return Response.json({ error: sanitized || "Unknown error" }, { status: 400 })
   }
 }
