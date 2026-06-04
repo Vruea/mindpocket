@@ -15,7 +15,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
   try {
     const client = createOpenAICompatible({
-      name: provider.name.replace(/[^\x20-\x7E]/g, '_'),
+      name: provider.name.replace(/[^\x20-\x7E]/g, "_"),
       apiKey: provider.apiKey,
       baseURL: provider.baseUrl,
     })
@@ -41,10 +41,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       raw = String(e)
     }
     // Strip any non-ASCII characters that cause ByteString encoding errors
-    const message = raw
-      .replace(/[^ -~ -ÿ]/g, '?')
-      .replace(/\u[0-9a-fA-F]{4}/g, '?')
+    const message = raw.replace(/[^\x20-\x7E]/g, "?")
     return Response.json({ error: message }, { status: 400 })
-  }, { status: 400 })
   }
 }
