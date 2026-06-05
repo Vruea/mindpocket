@@ -4,6 +4,21 @@ import { headers } from "next/headers"
 import { getProviderWithDecryptedKey } from "@/db/queries/ai-provider"
 import { auth } from "@/lib/auth"
 
+// Build a safe ASCII-only error message from any error
+function safeErrorMsg(e: unknown): string {
+  try {
+    let msg = "Unknown error"
+    if (typeof e === "string") return e.replace(/[^\x20-\x7E]/g, "?")
+    if (e instanceof Error) {
+      // Access message safely - it may throw if the Error object is corrupted
+      try { msg = e.message || msg } catch { msg = "Error (message inaccessible)" }
+    }
+    return msg.replace(/[^\x20-\x7E]/g, "?")
+  } catch {
+    return "Unknown error"
+  }
+}
+
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth.api.getSession({ headers: await headers() })
   const userId = session!.user!.id
@@ -11,7 +26,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params
   const provider = await getProviderWithDecryptedKey(id, userId)
   if (!provider) {
-    return Response.json({ error: "Not found" }, { status: 404 })
+    return new Response("Not found", { status: 404 })
   }
   try {
     const client = createOpenAICompatible({
@@ -32,19 +47,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       })
     }
 
-    return Response.json({ ok: true })
+    return new Response("OK", { status: 200 })
   } catch (e) {
-    let message = "Unknown error"
-    if (e instanceof Error) {
-      message = e.message
-    } else if (e !== null && typeof e === "object") {
-      const err = e as Record<string, unknown>
-      message = (err.message as string) || (err.error as string) || message
-    } else if (typeof e === "string") {
-      message = e
-    }
-    // Remove any character outside printable ASCII range
-    const sanitized = message.replace(/[^\x00-\x7F]/g, "?").trim()
-    return Response.json({ error: sanitized || "Unknown error" }, { status: 400 })
+    const msg = safeErrorMsg(e)
+    // Build JSON manually to avoid any automatic serialization issues
+    const body = '{"error":"' + msg + '"}'
+    return new Response(body, {
+      status: 400,
+      headers: { "Content-Type": "application/json; charset=utf-8" }
+    })
   }
 }
